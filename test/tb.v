@@ -4,11 +4,13 @@
 /* This testbench just instantiates the module and makes some convenient wires
    that can be driven / tested by the cocotb test.py.
 */
-module tb ();
+module tb #(
+  parameter WORD_SIZE=8
+)();
 
   // Dump the signals to a FST file. You can view it with gtkwave or surfer.
   initial begin
-    $dumpfile("tb.fst");
+    $dumpfile("tb.vcd");
     $dumpvars(0, tb);
     #1;
   end
@@ -17,18 +19,24 @@ module tb ();
   reg clk;
   reg rst_n;
   reg ena;
-  reg [7:0] ui_in;
-  reg [7:0] uio_in;
-  wire [7:0] uo_out;
-  wire [7:0] uio_out;
-  wire [7:0] uio_oe;
+  wire [7:0] uio_oe = 8'b0000_0011;
 `ifdef GL_TEST
   wire VPWR = 1'b1;
   wire VGND = 1'b0;
 `endif
 
+  reg [1:0] ctl;
+  reg [3:0] debug_selector;
+  reg[WORD_SIZE-1:0] data_in;
+
+  wire [WORD_SIZE-1:0] data_out;
+  wire [1:0] status;
+  wire [7:0] uio_out_bus;
+
+  assign status = uio_out_bus[1:0];
+
   // Replace tt_um_example with your module name:
-  tt_um_example user_project (
+  tt_um_andre_dpe tt_um_andre_dpe (
 
       // Include power ports for the Gate Level test:
 `ifdef GL_TEST
@@ -36,10 +44,10 @@ module tb ();
       .VGND(VGND),
 `endif
 
-      .ui_in  (ui_in),    // Dedicated inputs
-      .uo_out (uo_out),   // Dedicated outputs
-      .uio_in (uio_in),   // IOs: Input path
-      .uio_out(uio_out),  // IOs: Output path
+      .ui_in  (data_in),    // Dedicated inputs
+      .uo_out (data_out),   // Dedicated outputs
+      .uio_in ({1'b0, ctl, debug_selector, 1'b0}),   // 0+ctl+debug_ctl+00 -> ctl is 2 bit long, debug_ctl is 4 bit long.
+      .uio_out(uio_out_bus),  // 000000+status -> status is 2 bit wide
       .uio_oe (uio_oe),   // IOs: Enable path (active high: 0=input, 1=output)
       .ena    (ena),      // enable - goes high when design is selected
       .clk    (clk),      // clock
