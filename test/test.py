@@ -3,7 +3,6 @@ import cocotb
 import enum
 from cocotb.triggers import Timer, RisingEdge, FallingEdge, ClockCycles
 from cocotb.clock import Clock
-from colorama import Fore, Back, Style
 
 
 CLOCK_PERIOD_NS = 10
