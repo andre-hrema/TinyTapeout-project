@@ -35,7 +35,7 @@ def reset_module(function):
         cocotb.log.info(f"Starting {function.__name__}")
 
         # Start clock
-        clock = Clock(dut.clk, 10, unit="ns")
+        clock = Clock(dut.clk, 10, units="ns")
         cocotb.start_soon(clock.start())
 
         # inverted reset logic
@@ -59,7 +59,7 @@ async def test_fsm_simple_calc_all_memories(dut):
     # Set control to CTL_WORK
     dut.ctl.value = 0x1
     await RisingEdge(dut.clk)
-    sim_time = cocotb.utils.get_sim_time(unit="ns")
+    sim_time = cocotb.utils.get_sim_time(units="ns")
     cocotb.log.info(f"Simulation time: {sim_time} ns")
 
 
@@ -192,7 +192,7 @@ async def test_fsm_simple_calc_15_pairs_entries(dut):
     # Set control to CTL_WORK
     dut.ctl.value = 0x1
     await RisingEdge(dut.clk)
-    sim_time = cocotb.utils.get_sim_time(unit="ns")
+    sim_time = cocotb.utils.get_sim_time(units="ns")
     cocotb.log.info(f"Simulation time: {sim_time} ns")
 
 
@@ -244,7 +244,7 @@ async def test_fsm_simple_calc_a(dut):
     # Set control to CTL_WORK
     dut.ctl.value = 0x1
     await RisingEdge(dut.clk)
-    sim_time = cocotb.utils.get_sim_time(unit="ns")
+    sim_time = cocotb.utils.get_sim_time(units="ns")
     cocotb.log.info(f"Simulation time: {sim_time} ns")
 
 
@@ -264,7 +264,7 @@ async def test_fsm_simple_calc_a(dut):
     dut.ctl.value = 0x0
     await RisingEdge(dut.clk)
 
-    sim_time = cocotb.utils.get_sim_time(unit="ns")
+    sim_time = cocotb.utils.get_sim_time(units="ns")
     cocotb.log.info(f"Simulation time: {sim_time} ns")
     # Switch store memory to block 2 and 3
     await RisingEdge(dut.clk)
@@ -308,7 +308,7 @@ async def test_fsm_simple_calc_b(dut):
     # Set control to CTL_WORK
     dut.ctl.value = 0x1
     await RisingEdge(dut.clk)
-    sim_time = cocotb.utils.get_sim_time(unit="ns")
+    sim_time = cocotb.utils.get_sim_time(units="ns")
     cocotb.log.info(f"Simulation time: {sim_time} ns")
 
     dut.data_in.value = 4
@@ -327,7 +327,7 @@ async def test_fsm_simple_calc_b(dut):
     dut.ctl.value = 0x0
     await RisingEdge(dut.clk)
 
-    sim_time = cocotb.utils.get_sim_time(unit="ns")
+    sim_time = cocotb.utils.get_sim_time(units="ns")
     cocotb.log.info(f"Simulation time: {sim_time} ns")
     # Switch store memory to block 2 and 3
     await RisingEdge(dut.clk)
