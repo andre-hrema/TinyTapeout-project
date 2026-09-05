@@ -42,7 +42,7 @@ module memory_bank #(
         MEM_STORE: begin
           mem_bank[counter] <= data_in;
 
-          if (counter == NUM_MEM_ELEMENTS)
+          if (counter == NUM_MEM_ELEMENTS - 1)
             counter <= 0;
           else
             counter <= counter + 1;
@@ -50,7 +50,7 @@ module memory_bank #(
         end
 
         MEM_LOAD: begin    
-          if (data_in < counter) begin
+          if (data_in < NUM_MEM_ELEMENTS) begin
               memory_content <= mem_bank[data_in];
           end else begin
               memory_content <= 0;
