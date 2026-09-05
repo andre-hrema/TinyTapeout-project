@@ -2,8 +2,8 @@
 `timescale 1ns/1ns
 
 module mac #(
-    parameter NUM_ELEMENTS = 16,
-    parameter WORD_SIZE = 8,
+    parameter NUM_ELEMENTS = 6,
+    parameter WORD_SIZE = 4,
     parameter RESULT_WIDTH = 2*WORD_SIZE + $clog2(NUM_ELEMENTS)
 )(mod_input, input_valid, result, done, clk, rst);
 

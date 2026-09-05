@@ -7,8 +7,8 @@
 `timescale 1ns/1ns
 
 module memory_bank #(
-    parameter NUM_MEM_ELEMENTS = 16,
-    parameter WORD_SIZE = 8
+    parameter NUM_MEM_ELEMENTS = 6,
+    parameter WORD_SIZE = 4
   )(
     input  wire  clk,      // clock
     input  wire  rst,
@@ -28,7 +28,7 @@ module memory_bank #(
   // the last element of mem_bank_x is used to store the intermediate values of the dot product
   reg [WORD_SIZE-1:0] mem_bank[NUM_MEM_ELEMENTS-1:0];
 
-  always_ff @(posedge clk) begin
+  always @(posedge clk) begin
     if (rst) begin
       counter <= 0;
       memory_content <= 0;
@@ -42,7 +42,7 @@ module memory_bank #(
         MEM_STORE: begin
           mem_bank[counter] <= data_in;
 
-          if (counter == NUM_MEM_ELEMENTS - 1)
+          if (counter == NUM_MEM_ELEMENTS)
             counter <= 0;
           else
             counter <= counter + 1;
@@ -50,9 +50,7 @@ module memory_bank #(
         end
 
         MEM_LOAD: begin    
-          if (data_in == 8'hFF) begin
-            memory_content <= {{(WORD_SIZE-$clog2(NUM_MEM_ELEMENTS)){1'b0}}, counter};
-          end else if (data_in < counter) begin
+          if (data_in < counter) begin
               memory_content <= mem_bank[data_in];
           end else begin
               memory_content <= 0;

@@ -17,7 +17,12 @@ module tt_um_andre_dpe (
 );
 
   wire rst = !rst_n;
-  assign uio_oe = 8'b0000_0011; // status(out): [1:0], debug_selector(in): [4:2], ctl(in): [5:6]
+  assign uio_oe = 8'b0001_1111; // result upper bits and status are outputs
+  assign uio_out[7:5] = 3'b000; // unused I/O bits must have a driver
+
+  wire [10:0] fsm_data_out;
+  assign uo_out = fsm_data_out[7:0];
+  assign uio_out[4:2] = fsm_data_out[10:8];
 
   fsm fsm(
       // Control signals
@@ -25,9 +30,8 @@ module tt_um_andre_dpe (
       .rst(rst),
       .ena(ena),
       .ctl(uio_in[6:5]), // bits [6:5] = ctl[1:0]
-      .debug_selector(uio_in[4:1]), // bits [4:1] = debug_selector[3:0]
       .data_in(ui_in), // [WORD_SIZE-1:0]
-      .data_out(uo_out), // [WORD_SIZE-1:0]
+      .data_out(fsm_data_out), // result[7:0] on uo_out, result[10:8] on uio_out[4:2]
       .status(uio_out[1:0]) // [1:0]
   );
 

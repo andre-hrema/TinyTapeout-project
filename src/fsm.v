@@ -3,8 +3,8 @@
 
 
 module fsm #(
-    parameter WORD_SIZE = 8,
-    parameter NUM_MEM_ELEMENTS = 16,
+    parameter WORD_SIZE = 4,
+    parameter NUM_MEM_ELEMENTS = 6,
     parameter RESULT_WIDTH = 2*WORD_SIZE + $clog2(NUM_MEM_ELEMENTS)
 )
 (
@@ -13,11 +13,10 @@ module fsm #(
     input  wire rst,
     input  wire ena,
     input  wire [1:0] ctl,
-    input  wire [3:0] debug_selector,
 
     // Data
-    input wire [WORD_SIZE-1:0] data_in,
-    output reg [WORD_SIZE-1:0] data_out,
+    input wire [2*WORD_SIZE-1:0] data_in,
+    output reg [RESULT_WIDTH-1:0] data_out,
 
     // Control
     output reg [1:0] status
@@ -50,29 +49,16 @@ typedef enum logic [1:0] {
     DPE_INTERNAL_ERROR     = 2'b11
 } dpe_status_t;
 
-typedef enum logic [2:0] {
-    MEM_A           = 3'b000,
-    MEM_B           = 3'b001,
-    MEM_C           = 3'b010,
-    MEM_D           = 3'b011,
-    MAC             = 3'b100,
-    FSM             = 3'b101,
-    EXEC_ONE_CYCLE  = 3'b110, // operate the MAC for one cycle and pause
-    EXEC_CURRENT    = 3'b111  // calculate the current dot product until the end and pause
-} debug_sel_t;
-
 state_t state;
 reg [1:0] store_memory;
 reg [1:0] calc_memory;
 
 
-logic [WORD_SIZE-1:0] mem_in[3:0];
-logic [1:0] mem_ctl[3:0];
-logic [WORD_SIZE-1:0] mem_out[3:0];
+logic [WORD_SIZE-1:0] mem_in[NUM_MEM_BANKS-1:0];
+logic [1:0] mem_ctl[NUM_MEM_BANKS-1:0];
+logic [WORD_SIZE-1:0] mem_out[NUM_MEM_BANKS-1:0];
 
 reg [$clog2(NUM_MEM_ELEMENTS*2):0] mem_load_counter[1:0];
-wire [$clog2(NUM_MEM_ELEMENTS*2):0] mem_load_counter_0;
-wire [$clog2(NUM_MEM_ELEMENTS*2):0] mem_load_counter_1;
 
 
 /* The banks will intercalate between data storage and MAC feeder
@@ -92,13 +78,9 @@ generate
 endgenerate
 
 reg mult_acc_input_valid;
-//reg [WORD_SIZE-1:0] mult_acc_input[1:0];
 logic [WORD_SIZE-1:0] mult_acc_input[1:0];
 reg [RESULT_WIDTH-1:0] result;
 
-// aliases para facilitar o dump (VCD/GTKWave costuma não mostrar arrays desempacotados)
-wire [WORD_SIZE-1:0] mult_acc_input_0 = mult_acc_input[0];
-wire [WORD_SIZE-1:0] mult_acc_input_1 = mult_acc_input[1];
 wire [2*WORD_SIZE-1:0] mult_acc_input_packed = {mult_acc_input[1], mult_acc_input[0]};
 
 reg run_mac;
@@ -117,7 +99,7 @@ mac mult_acc(
     .rst(rst)
 );
 
-always_ff @(posedge clk) begin
+always @(posedge clk) begin
 
     if (rst) begin
         state <= IDLE;
@@ -155,8 +137,7 @@ always_ff @(posedge clk) begin
             // so the storage and calculation keep working in the background
             CTL_READ_RESULT:
             begin
-                data_out <= result[RESULT_WIDTH-1:RESULT_WIDTH-WORD_SIZE];
-                result <= result << WORD_SIZE;
+                data_out <= result;
             end
         endcase
 
@@ -183,12 +164,13 @@ always_ff @(posedge clk) begin
                     mem_address_counter <= mem_address_counter + 2'b01;
 
                 end else begin
-                    mem_in[store_memory] <= data_in;
-                    mem_ctl[store_memory] <= MEM_STORE;
-                    mem_ctl[{store_memory[1], ~store_memory[0]}] <= MEM_IDLE;
-                    mem_load_counter[store_memory[1]] <= mem_load_counter[store_memory[1]] + 1'b1;
-
-                    store_memory <= {store_memory[1], ~store_memory[0]};
+                    // store the data in the memory bank
+                    // half of the data is stored in one bank, the other half in the other bank
+                    mem_in[{store_memory[1], 1'b0}] <= data_in[WORD_SIZE-1:0];
+                    mem_in[{store_memory[1], 1'b1}] <= data_in[2*WORD_SIZE-1:WORD_SIZE];
+                    mem_ctl[{store_memory[1], 1'b0}] <= MEM_STORE;
+                    mem_ctl[{store_memory[1], 1'b1}] <= MEM_STORE;
+                    mem_load_counter[store_memory[1]] <= mem_load_counter[store_memory[1]] + 2'b10;
                 end
             end
 
@@ -199,14 +181,13 @@ always_ff @(posedge clk) begin
             // Check if all items were read from memory, if so, stop feeding the MAC and reset the counter
             if(mac_counter == mem_load_counter[calc_memory[1]]) begin
                 run_mac <= 0;
-                run_mac <= 0;
                 mult_acc_input_valid <= 0;
                 mac_counter <= 0;
                 mem_address_counter <= 0;
                 mem_load_counter[calc_memory[1]] <= 0;
                 mem_ctl[{calc_memory[1], 1'b0}] <= MEM_CLEAR;
             // Check if mac_counter reached the maximum number of elements to be read, if so, an error state is triggered
-            end else if(mem_address_counter == NUM_MEM_ELEMENTS) begin
+            end else if(mem_address_counter > NUM_MEM_ELEMENTS) begin
                 run_mac <= 0;
                 run_mac <= 0;
                 mult_acc_input_valid <= 0;
@@ -234,7 +215,7 @@ always_ff @(posedge clk) begin
         end
 
         // is dot product done?
-        if(done && ctl != CTL_READ_RESULT) begin
+        if(done) begin
             result <= mac_result;
             status <= DPE_RESULT_AVAILABLE;
         end
@@ -244,8 +225,5 @@ always_ff @(posedge clk) begin
 end
     assign mult_acc_input[0] = mem_out[{calc_memory[1], 1'b0}];
     assign mult_acc_input[1] = mem_out[{calc_memory[1], 1'b1}];
-
-    assign mem_load_counter_0 = mem_load_counter[0];
-    assign mem_load_counter_1 = mem_load_counter[1];
 
 endmodule

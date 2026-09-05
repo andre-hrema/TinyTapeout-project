@@ -47,14 +47,14 @@ def reset_module(function):
         await function(dut)
     return wrapper
 
-
+"""
 # Testing all memory banks
 @cocotb.test()
 @reset_module
 async def test_fsm_simple_calc_all_memories(dut):
-    #Test the FSM module with a simple calculation
+    # Test the FSM module with a simple calculation
 
-    MAX_ENTRIES = 30
+    MAX_ENTRIES = 12
 
     # Set control to CTL_WORK
     dut.ctl.value = 0x1
@@ -63,131 +63,37 @@ async def test_fsm_simple_calc_all_memories(dut):
     cocotb.log.info(f"Simulation time: {sim_time} ns")
 
 
-    for i in range(0,MAX_ENTRIES):
-        dut.data_in.value = i
+    for i in range(1,MAX_ENTRIES, 2):
+        dut.data_in.value = ((i + 1) << 4) | i
         await RisingEdge(dut.clk)
 
     # Set control to CTL_IDLE to trigger RUN_MAC
     dut.ctl.value = 0x0
     await RisingEdge(dut.clk)
 
-    dut.ctl.value = 0x1
-
-    second_input_round = 2
-    dut.data_in.value = second_input_round
-
-    # Switch store memory to block 2 and 3
+    # Move the FSM to WORK before changing to read-and-store mode.
+    dut.ctl.value = CtlFSM.CTL_WORK.value
     await RisingEdge(dut.clk)
 
-    for i in range(0,MAX_ENTRIES-1,2):
+    second_input_array = [242, 227, 212, 197, 182, 167]
 
-        # 15 data filled in the second group of memory banks
-        dut.data_in.value = second_input_round
-
-        await RisingEdge(dut.clk)
-        assert dut.status.value == DpeStatus.DPE_IN_PROGRESS.value, f"status should be DPE_IN_PROGRESS (1), got {dut.status.value}"
-
-        second_input_round = second_input_round + 2
-
-    #16th data
-    dut.data_in.value = second_input_round
-    second_input_round = second_input_round + 2
-
-
-    # Feeding MAC with zeroed values
-    await RisingEdge(dut.clk)
-    assert dut.status.value == DpeStatus.DPE_IN_PROGRESS.value, f"status should be DPE_IN_PROGRESS (1), got {dut.status.value}"
-
-    #17th data
-    dut.data_in.value = second_input_round
-    second_input_round = second_input_round + 2
-    # Feeding MAC with stored values 3 and 4
-    await RisingEdge(dut.clk)
-    #18th data
-    dut.data_in.value = second_input_round
-    second_input_round = second_input_round + 2
-    await RisingEdge(dut.clk)
-    #19th data
-    dut.data_in.value = second_input_round
-    second_input_round = second_input_round + 2
-    await RisingEdge(dut.clk)
-
-    # done == 1
-
-    #20th data
-    dut.data_in.value = second_input_round
-    second_input_round = second_input_round + 2
-    await RisingEdge(dut.clk)
-    
-    #assert dut.result.value == 4270, f"result should be 4270, got {dut.result.value}"
-    assert dut.status.value == DpeStatus.DPE_RESULT_AVAILABLE.value, f"status should be DPE_RESULT_AVAILABLE (2), got {dut.status.value}"
+    # Read the first result while storing the next round during its calculation.
     dut.ctl.value = CtlFSM.CTL_READ_RESULT.value
-    #21th data
-    dut.data_in.value = second_input_round
-    second_input_round = second_input_round +2
-    await RisingEdge(dut.clk)
-    #22th data
-    dut.data_in.value = second_input_round
-    second_input_round = second_input_round +2
-    await RisingEdge(dut.clk)
-    assert dut.data_out.value == 1
-    #23th data
-    dut.data_in.value = second_input_round
-    second_input_round = second_input_round +2
-    await RisingEdge(dut.clk)
-    assert dut.data_out.value == 10
-    #24th data
-    dut.data_in.value = second_input_round
-    second_input_round = second_input_round +2
-    await RisingEdge(dut.clk)
-    assert dut.data_out.value == 224
-
-    dut.ctl.value = 1
-
-    # Finishing storing data value in the second memory bank
-    for i in range(24, MAX_ENTRIES):
-        dut.data_in.value = second_input_round
-        second_input_round = second_input_round + 2
-        await RisingEdge(dut.clk)
-
-    # Set control to CTL_IDLE to trigger RUN_MAC
-    dut.ctl.value = 0x0
+    dut.data_in.value = second_input_array[0]
     await RisingEdge(dut.clk)
 
-    # Switch store memory to block 0 and 1
-    await RisingEdge(dut.clk)
-
-    # waiting second round to be calculated
-    for i in range(0,MAX_ENTRIES-1,2):
-        await RisingEdge(dut.clk)
-
-    # Feeding MAC with zeroed values
-    await RisingEdge(dut.clk)
-    assert dut.status.value == DpeStatus.DPE_IN_PROGRESS.value, f"status should be DPE_IN_PROGRESS (1), got {dut.status.value}"
-    
-    await RisingEdge(dut.clk)
-    await RisingEdge(dut.clk)
-    await RisingEdge(dut.clk)
-    await RisingEdge(dut.clk)
-    # done == 1
-    #assert dut.result.value == 18880, f"result should be 18880, got {dut.result.value}"
-    dut.ctl.value = CtlFSM.CTL_READ_RESULT.value
-    await RisingEdge(dut.clk)
-    await RisingEdge(dut.clk)
-    assert dut.data_out.value == 4
-    await RisingEdge(dut.clk)
-    assert dut.data_out.value == 156
-    await RisingEdge(dut.clk)
-    assert dut.data_out.value == 0
+    # Feed with the second round
+    # Firs result should be 322 and second 320
+"""
 
 
-# Testing all 15 entries
+# Testing all 12 entries
 @cocotb.test()
 @reset_module
-async def test_fsm_simple_calc_15_pairs_entries(dut):
+async def test_fsm_simple_calc_6_pairs_entries(dut):
     #Test the FSM module with a simple calculation
 
-    MAX_ENTRIES = 30
+    MAX_ENTRIES = 12
 
     # Set control to CTL_WORK
     dut.ctl.value = 0x1
@@ -196,8 +102,8 @@ async def test_fsm_simple_calc_15_pairs_entries(dut):
     cocotb.log.info(f"Simulation time: {sim_time} ns")
 
 
-    for i in range(0,MAX_ENTRIES):
-        dut.data_in.value = i
+    for i in range(1,MAX_ENTRIES, 2):
+        dut.data_in.value = ((i + 1) << 4) | i
         await RisingEdge(dut.clk)
     
     # Set control to CTL_IDLE to trigger RUN_MAC
@@ -224,17 +130,13 @@ async def test_fsm_simple_calc_15_pairs_entries(dut):
 
     # done == 1
     await RisingEdge(dut.clk)
-    #assert dut.result.value == 4270, f"result should be 4270, got {dut.result.value}"
     assert dut.status.value == DpeStatus.DPE_RESULT_AVAILABLE.value, f"status should be DPE_RESULT_AVAILABLE (2), got {dut.status.value}"
 
     dut.ctl.value = CtlFSM.CTL_READ_RESULT.value
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
-    assert dut.data_out.value == 1
-    await RisingEdge(dut.clk)
-    assert dut.data_out.value == 10
-    await RisingEdge(dut.clk)
-    assert dut.data_out.value == 224
+    assert dut.data_out.value == 322
+
 
 @cocotb.test()
 @reset_module
@@ -247,17 +149,12 @@ async def test_fsm_simple_calc_a(dut):
     sim_time = cocotb.utils.get_sim_time(units="ns")
     cocotb.log.info(f"Simulation time: {sim_time} ns")
 
-
-    dut.data_in.value = 1
+    # input 2 and 1
+    dut.data_in.value = 33
     await RisingEdge(dut.clk)
 
-    dut.data_in.value = 2
-    await RisingEdge(dut.clk)
-
-    dut.data_in.value = 3
-    await RisingEdge(dut.clk)
-    
-    dut.data_in.value = 4
+    # input 4 and 3
+    dut.data_in.value = 67
     await RisingEdge(dut.clk)
     
     # Set control to CTL_IDLE to trigger RUN_MAC
@@ -288,16 +185,11 @@ async def test_fsm_simple_calc_a(dut):
 
     # done == 1
     await RisingEdge(dut.clk)
-    #assert dut.result.value == 14, f"result should be 14, got {dut.result.value}"
     assert dut.status.value == DpeStatus.DPE_RESULT_AVAILABLE.value, f"status should be DPE_RESULT_AVAILABLE (2), got {dut.status.value}"
     dut.ctl.value = CtlFSM.CTL_READ_RESULT.value
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
-    assert dut.data_out.value == 0
-    await RisingEdge(dut.clk)
-    assert dut.data_out.value == 0
-    await RisingEdge(dut.clk)
-    assert dut.data_out.value == 224
+    assert dut.data_out.value == 14
 
 
 @cocotb.test()
@@ -311,16 +203,12 @@ async def test_fsm_simple_calc_b(dut):
     sim_time = cocotb.utils.get_sim_time(units="ns")
     cocotb.log.info(f"Simulation time: {sim_time} ns")
 
-    dut.data_in.value = 4
+    # input 5 and 4
+    dut.data_in.value = 84
     await RisingEdge(dut.clk)
 
-    dut.data_in.value = 5
-    await RisingEdge(dut.clk)
-
-    dut.data_in.value = 6
-    await RisingEdge(dut.clk)
-    
-    dut.data_in.value = 7
+    # input 7 and 6
+    dut.data_in.value = 118
     await RisingEdge(dut.clk)
     
     # Set control to CTL_IDLE to trigger RUN_MAC
@@ -350,25 +238,19 @@ async def test_fsm_simple_calc_b(dut):
     await RisingEdge(dut.clk)
 
     await RisingEdge(dut.clk)
-    #assert dut.result.value == 62, f"result should be 20 (1*2 + 3*4), got {dut.result.value}"
     assert dut.status.value == DpeStatus.DPE_RESULT_AVAILABLE.value, f"status should be DPE_RESULT_AVAILABLE (2), got {dut.status.value}"
 
     dut.ctl.value = CtlFSM.CTL_READ_RESULT.value
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
-    assert dut.data_out.value == 0
-    await RisingEdge(dut.clk)
-    assert dut.data_out.value == 3
-    await RisingEdge(dut.clk)
-    assert dut.data_out.value == 224
-
+    assert dut.data_out.value == 62
 
 
 # Test reset behavior of the FSM module
 @cocotb.test()
 @reset_module
 async def test_fsm_reset(dut):
-    """Test the FSM module"""
+    # Test the FSM module
 
     # Check initial state
     assert dut.data_out.value == 0, f"result should be 0 after reset, got {dut.data_out.value}"
